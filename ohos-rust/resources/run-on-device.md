@@ -32,7 +32,6 @@ just works.
 ```sh
 TARGET=aarch64-unknown-linux-ohos
 BIN=target/$TARGET/release/myapp
-LIBCXX="$OHOS_SDK_NATIVE/llvm/lib/aarch64-linux-ohos/libc++_shared.so"
 
 # 1. Build
 cargo build --release --target "$TARGET"

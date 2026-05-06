@@ -114,16 +114,18 @@ the OHOS toolchain) is in c-deps.md.
 ```sh
 file target/aarch64-unknown-linux-ohos/release/myapp
 # → ELF 64-bit LSB pie executable, ARM aarch64, ... dynamically linked,
-#   interpreter /system/bin/ld-musl-aarch64.so.1 ...
+#   interpreter /lib/ld-musl-aarch64.so.1 ...
 ```
 
-The interpreter line — `/system/bin/ld-musl-aarch64.so.1` — confirms it's
-a real OHOS binary (musl-based), not glibc. If you see
-`/lib64/ld-linux-x86-64.so.2` or similar, you accidentally produced a
-host binary; the linker env var is not taking effect.
+The `ld-musl-*` interpreter — typically `/lib/ld-musl-aarch64.so.1`
+(older or differently-configured OHOS images may use
+`/system/bin/ld-musl-aarch64.so.1`) — confirms it's a real OHOS binary
+(musl-based), not glibc. If you see `/lib64/ld-linux-x86-64.so.2` or
+similar, you accidentally produced a host binary; the linker env var is
+not taking effect.
 
 ```sh
 "$OHOS_SDK_NATIVE/llvm/bin/llvm-readelf" -d \
     target/aarch64-unknown-linux-ohos/release/myapp | grep NEEDED
-# Should list libc.so, libc++_shared.so, ld-musl-aarch64.so.1, ...
+# Should list libc.so, ld-musl-aarch64.so.1, ...
 ```

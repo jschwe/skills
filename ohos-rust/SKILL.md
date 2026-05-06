@@ -35,7 +35,12 @@ contains `native/` (possibly nested under an api-level directory).
    For each: if `<root>/native` exists, use it; otherwise pick the
    highest-numbered `<api>/native` (recursively, for the DevEco case).
 4. Bundled with a DevEco Studio installation: 
-   `<DevEcoStudioInstallationDir>/sdk/default/openharmony/native`
+   `<DevEcoStudioInstallationDir>/sdk/default/openharmony/native`.
+   Common install locations:
+   - **macOS:** `/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/native`
+   - **Windows:** `C:\Program Files\Huawei\DevEco Studio\sdk\default\openharmony\native`
+   - **Linux:** DevEco Studio is not distributed for Linux — skip this step
+     and ask the user for the SDK root.
 5. Nothing matched → **ask the user** for the SDK root and offer to record
    as a memory.
 
@@ -129,18 +134,6 @@ For the long-form walkthrough — including SDK layout, picking the right
 sysroot when there are multiple, common linker errors and their fixes 
 — see @ohos-rust/resources/setup.md.
 
-## Pushing and running on a device
-
-OHOS Rust binaries dynamically link `libc++_shared.so`; that library is
-**not** on the device by default. Push it alongside the binary and set
-`LD_LIBRARY_PATH`. Full hdc recipe (incl. `/data/local/tmp` permissions
-and capturing the device-side exit code, since `hdc shell` swallows it):
-@ohos-rust/resources/run-on-device.md.
-
-The hdc skill covers the device-connector itself — particularly the
-silent-exit-code gotcha that bites any "build → push → run → check $?"
-script.
-
 ## Running `cargo test` / `cargo bench` / `cargo run` on a device
 
 Cargo's `target.<triple>.runner` mechanism lets you offload the
@@ -171,6 +164,16 @@ per-target, so leaving them set for OHOS triples doesn't affect host
 If `hdc list targets` is empty when the runner tries to execute, see the
 sandbox-visibility note in @ohos-rust/resources/run-on-device.md — the
 runner will hit the same wall as a hand-rolled `hdc shell` invocation.
+
+## Manual pushing and running on a device
+
+Full hdc recipe (incl. `/data/local/tmp` permissions
+and capturing the device-side exit code, since `hdc shell` swallows it):
+@ohos-rust/resources/run-on-device.md.
+
+The hdc skill covers the device-connector itself — particularly the
+silent-exit-code gotcha that bites any "build → push → run → check $?"
+script.
 
 ## Crates with C dependencies (cc-rs, bindgen, *-sys)
 
