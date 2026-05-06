@@ -55,6 +55,15 @@ over the relay. Workaround is a tiny `setwinsize` helper that calls
 `ioctl(TIOCSWINSZ)` to set the size before launching the TUI:
 @hdc/resources/tty.md.
 
+## What can I run via `hdc shell`?
+
+OHOS ships ~20 device-side CLI tools — `aa`, `bm`, `hilog`, `hidumper`,
+`hitrace`, `hiperf`, `param`, `power-shell`, `atm`, `cem`, `anm`, `acm`,
+`edm`, `devicedebug`, `mediatool`, `uitest`, `toybox` (coreutils), and
+a few more. For a one-page lookup table grouped by purpose (apps,
+profiling, params, security, …) plus root-only / eng-only caveats, see
+@hdc/resources/device-commands.md.
+
 ## More
 
 For multi-device targeting (`-t`), `file send`/`recv` argument order, `bm`-passthrough flag quoting on `hdc install`, the common diagnostic sequence, and env vars, see @hdc/resources/hdc.md.
