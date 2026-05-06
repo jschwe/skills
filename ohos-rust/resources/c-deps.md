@@ -14,11 +14,26 @@ segfaults on the device.
 
 ## cc-rs / `*-sys` crates
 
-`cc-rs` reads `<TOOL>_<TARGET>` (target with underscores, uppercased)
-*first*, falling back to plain `<TOOL>`. Use the per-target form so
-host builds in the same shell still work.
+`cc-rs` looks up tool variables in this order ([cc-rs source][cc-target-envs]):
 
-Point `CC_*` / `CXX_*` at the SDK's per-triple wrapper scripts — same
+1. `<TOOL>_<TARGET>` — target as-is, with hyphens (`CC_aarch64-unknown-linux-ohos`)
+2. `<TOOL>_<TARGET_U>` — target lowercase with hyphens replaced by underscores (`CC_aarch64_unknown_linux_ohos`)
+3. `TARGET_<TOOL>` — applies to whichever cross-target is active (`TARGET_CC`)
+4. `<TOOL>` — plain `CC`
+
+[cc-target-envs]: https://github.com/rust-lang/cc-rs/blob/main/src/lib.rs
+
+**The triple is lowercase.** `CC_AARCH64_UNKNOWN_LINUX_OHOS` (uppercase)
+is *not* a form cc-rs recognizes — setting only that variant silently
+falls through to plain `cc`, which on a non-OHOS host produces "C
+compiler cannot create executables" from configure-style build scripts.
+
+Prefer the `TARGET_<TOOL>` form — it's shorter, doesn't carry the case-typo
+risk and is also recognized by autoconf based configure scripts.
+In some cases build.rs scripts might set a higher-priority variable than `TARGET_<TOOL>`;
+if that causes issues, try setting `<TOOL>_<TARGET>` explicitly.
+
+Point the compiler vars at the SDK's per-triple wrapper scripts — same
 ones used as the Rust linker — so you don't need to repeat `--target=`
 and `--sysroot=` in `CFLAGS_*` / `CXXFLAGS_*`. (Windows hosts: the
 wrappers are POSIX shell scripts; use `clang.exe` + explicit flags as
@@ -28,35 +43,30 @@ shown in @ohos-rust/resources/windows-setup.md.)
 NDK="$OHOS_SDK_NATIVE"
 LLVM_BIN="$NDK/llvm/bin"
 
-# aarch64-unknown-linux-ohos → AARCH64_UNKNOWN_LINUX_OHOS
-T_AARCH64=AARCH64_UNKNOWN_LINUX_OHOS
-export CC_${T_AARCH64}="$LLVM_BIN/aarch64-unknown-linux-ohos-clang"
-export CXX_${T_AARCH64}="$LLVM_BIN/aarch64-unknown-linux-ohos-clang++"
-export AR_${T_AARCH64}="$LLVM_BIN/llvm-ar"
+# TARGET_* form.
+export TARGET_CC="$LLVM_BIN/aarch64-unknown-linux-ohos-clang"
+export TARGET_CXX="$LLVM_BIN/aarch64-unknown-linux-ohos-clang++"
+export TARGET_AR="$LLVM_BIN/llvm-ar"
 
-# armv7
-T_ARMV7=ARMV7_UNKNOWN_LINUX_OHOS
-export CC_${T_ARMV7}="$LLVM_BIN/armv7-unknown-linux-ohos-clang"
-export CXX_${T_ARMV7}="$LLVM_BIN/armv7-unknown-linux-ohos-clang++"
-export AR_${T_ARMV7}="$LLVM_BIN/llvm-ar"
+# Or, per-target form — lowercase triple, hyphens → underscores.
+export CC_aarch64_unknown_linux_ohos="$LLVM_BIN/aarch64-unknown-linux-ohos-clang"
+export CXX_aarch64_unknown_linux_ohos="$LLVM_BIN/aarch64-unknown-linux-ohos-clang++"
+export AR_aarch64_unknown_linux_ohos="$LLVM_BIN/llvm-ar"
 
-# x86_64
-T_X86=X86_64_UNKNOWN_LINUX_OHOS
-export CC_${T_X86}="$LLVM_BIN/x86_64-unknown-linux-ohos-clang"
-export CXX_${T_X86}="$LLVM_BIN/x86_64-unknown-linux-ohos-clang++"
-export AR_${T_X86}="$LLVM_BIN/llvm-ar"
+# Same pattern for armv7 / x86_64:
+#   CC_armv7_unknown_linux_ohos, CC_x86_64_unknown_linux_ohos, etc.
 ```
 
-Some `*-sys` crates also honor `RANLIB_<TARGET>`; if you hit
-`ranlib: invalid argument` style errors, set
-`RANLIB_<TARGET>="$LLVM_BIN/llvm-ranlib"` too.
+Some `*-sys` crates also honor `TARGET_RANLIB>`; if you hit
+`ranlib: invalid argument` style errors, set `TARGET_RANLIB`="$LLVM_BIN/llvm-ranlib"
+or `RANLIB_<target>`.
 
 If a particular crate insists on bypassing the wrappers (some hand-roll
 their own clang invocation), fall back to the explicit form:
 
 ```sh
-export CC_${T_AARCH64}="$LLVM_BIN/clang"
-export CFLAGS_${T_AARCH64}="--target=aarch64-linux-ohos --sysroot=$NDK/sysroot"
+export TARGET_CC="$LLVM_BIN/clang"
+export TARGET_CFLAGS="--target=aarch64-linux-ohos --sysroot=$NDK/sysroot"
 # armv7 also needs: -march=armv7-a -mfloat-abi=softfp
 ```
 
@@ -64,11 +74,11 @@ export CFLAGS_${T_AARCH64}="--target=aarch64-linux-ohos --sysroot=$NDK/sysroot"
 
 `bindgen` invokes libclang to parse C headers. It does **not** pick up
 `CFLAGS_*` automatically. Pass clang flags via
-`BINDGEN_EXTRA_CLANG_ARGS_<TARGET>` (per-target, same naming convention
-as cc-rs):
+`BINDGEN_EXTRA_CLANG_ARGS_<target>` — same lowercase, hyphens-or-
+underscores convention as cc-rs:
 
 ```sh
-export BINDGEN_EXTRA_CLANG_ARGS_${T_AARCH64}="\
+export BINDGEN_EXTRA_CLANG_ARGS_aarch64_unknown_linux_ohos="\
 --target=aarch64-linux-ohos \
 --sysroot=$NDK/sysroot \
 -I$NDK/sysroot/usr/include/aarch64-linux-ohos"
@@ -88,8 +98,8 @@ not what you want.
 For crates using the `cmake` crate:
 
 ```sh
-export CMAKE_TOOLCHAIN_FILE_${T_AARCH64}="$NDK/build/cmake/ohos.toolchain.cmake"
-export OHOS_ARCH_${T_AARCH64}=aarch64
+export CMAKE_TOOLCHAIN_FILE_aarch64_unknown_linux_ohos="$NDK/build/cmake/ohos.toolchain.cmake"
+export OHOS_ARCH_aarch64_unknown_linux_ohos=aarch64
 ```
 
 The OHOS NDK ships `ohos.toolchain.cmake` which already wires up the
