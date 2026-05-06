@@ -45,6 +45,16 @@ hdc fport rm tcp:4480 tcp:4480
 
 `hdc rport rm tcp:N tcp:N` is rejected as `Incorrect forward command` and is a frequent source of "why won't this clean up" confusion.
 
+## TUI apps render a black screen
+
+`hdc shell` (interactive) allocates a PTY but does **not** propagate the
+host terminal's window size — `TIOCGWINSZ` returns `rows=0 cols=0`, so
+curses / TUI apps clear the screen and draw nothing. There is no `stty`
+on device, and the cursor-DSR fallback (`\x1b[6n`) is also unreliable
+over the relay. Workaround is a tiny `setwinsize` helper that calls
+`ioctl(TIOCSWINSZ)` to set the size before launching the TUI:
+@hdc/resources/tty.md.
+
 ## More
 
 For multi-device targeting (`-t`), `file send`/`recv` argument order, `bm`-passthrough flag quoting on `hdc install`, the common diagnostic sequence, and env vars, see @hdc/resources/hdc.md.
