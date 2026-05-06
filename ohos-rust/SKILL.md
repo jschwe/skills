@@ -43,6 +43,27 @@ Verify by checking that `$OHOS_SDK_NATIVE/llvm/bin/clang` and
 `$OHOS_SDK_NATIVE/sysroot` both exist. If the SDK is api-level-versioned
 (`<sdk>/<api>/native/`), pick the highest numeric `<api>` directory.
 
+### Picking the API level when a device is connected
+
+If multiple API levels are installed under the SDK root **and** a target
+device is reachable via `hdc`, prefer the SDK whose API level matches
+the device. Query the device with:
+
+```sh
+hdc shell 'param get const.ohos.apiversion'
+# → 12     (or 11, 14, …)
+```
+
+Then point `$OHOS_SDK_NATIVE` at the matching `<api>/native/` directory.
+Building against a newer SDK than the device runs is the usual cause of
+`undefined reference` / missing-symbol errors at load time on the
+device — the binary references libc / OHOS APIs that don't exist in the
+device's older runtime.
+
+If `hdc list targets` is empty, see the sandbox-visibility note in
+@ohos-rust/resources/run-on-device.md before falling back to "highest
+installed API level".
+
 ## Add the required rustup targets
 
 ```sh

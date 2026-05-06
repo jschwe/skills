@@ -8,6 +8,25 @@ the connector itself; the **only** thing from there worth repeating in
 context is that `hdc shell <cmd>` swallows the device-side exit code,
 so naive `set -e` scripts silently miss device failures.
 
+## Sandboxed agents — USB visibility
+
+If the agent is running in a sandbox (Claude Code's sandbox mode,
+container, or any env that strips USB access), `hdc list targets` will
+return an empty list even when a device is plugged in and `hdc` works
+fine for the user outside the sandbox. The daemon itself starts, but
+the underlying libusb/IOKit calls are blocked.
+
+Symptoms:
+- `hdc list targets` prints nothing (or only `[Empty]`).
+- `hdc shell ...` fails with `[Fail]Connect server failed` or
+  `Not match target` despite a working device.
+
+Action: **ask the user to elevate / unsandbox the hdc command** before
+proceeding. Don't fall back to mock data, skip the run step, or assume
+the device is offline — the device is fine, the agent's view of USB
+isn't. A re-run of the same command outside the sandbox typically
+just works.
+
 ## One-shot run
 
 ```sh
