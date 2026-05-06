@@ -41,4 +41,5 @@ install_skill() {
 install_skill hdc
 install_skill ohos-performance-testing
 install_skill ohos-rust
+install_skill servo-ohos
 install_skill whatwg-spec
