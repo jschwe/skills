@@ -141,6 +141,37 @@ The hdc skill covers the device-connector itself — particularly the
 silent-exit-code gotcha that bites any "build → push → run → check $?"
 script.
 
+## Running `cargo test` / `cargo bench` / `cargo run` on a device
+
+Cargo's `target.<triple>.runner` mechanism lets you offload the
+"push to device → execute → return exit code + stdout" dance to a
+helper. [`ohos-test-runner`](https://github.com/openharmony-rs/ohos-test-runner)
+is a purpose-built runner for OpenHarmony devices — it wraps `hdc` and
+correctly propagates the device-side exit code, so `cargo test` actually
+fails when a test fails on the device.
+
+```sh
+cargo install --locked ohos-test-runner
+
+# Wire it up as the runner for whichever target(s) you build for.
+export CARGO_TARGET_AARCH64_UNKNOWN_LINUX_OHOS_RUNNER=ohos-test-runner
+export CARGO_TARGET_ARMV7_UNKNOWN_LINUX_OHOS_RUNNER=ohos-test-runner
+export CARGO_TARGET_X86_64_UNKNOWN_LINUX_OHOS_RUNNER=ohos-test-runner
+
+cargo test  --target aarch64-unknown-linux-ohos
+cargo bench --target aarch64-unknown-linux-ohos
+cargo run   --target aarch64-unknown-linux-ohos --bin myapp
+```
+
+This composes with the linker setup above: the `*_LINKER` env var
+governs the build, the `*_RUNNER` env var governs execution. Both are
+per-target, so leaving them set for OHOS triples doesn't affect host
+`cargo test`.
+
+If `hdc list targets` is empty when the runner tries to execute, see the
+sandbox-visibility note in @ohos-rust/resources/run-on-device.md — the
+runner will hit the same wall as a hand-rolled `hdc shell` invocation.
+
 ## Crates with C dependencies (cc-rs, bindgen, *-sys)
 
 When a dependency builds C/C++ via `cc-rs` or generates bindings via
