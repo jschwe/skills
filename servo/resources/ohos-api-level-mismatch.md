@@ -20,7 +20,7 @@ Run the launch with hilog cleared first, then dump everything from the app's PID
 
 ```bash
 hdc shell "hilog -r"                                    # clear ring buffer
-hdc shell "aa force-stop -b org.servo.servo"
+hdc shell "aa force-stop org.servo.servo"
 hdc shell "aa start -a EntryAbility -b org.servo.servo -U https://example.com/"
 sleep 4
 hdc shell "hilog -x" > /tmp/hilog.txt                   # full dump
