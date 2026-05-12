@@ -43,4 +43,5 @@ install_skill ohos-performance-testing
 install_skill ohos-rust
 install_skill ohos-uitest
 install_skill servo
+install_skill unsafe-rust-soundness
 install_skill whatwg-spec
