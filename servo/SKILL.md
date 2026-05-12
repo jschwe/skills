@@ -1,6 +1,6 @@
 ---
 name: servo
-description: Troubleshoot Servo build and runtime issues — confirm known bugs and apply documented work-arounds. Trigger when `./mach build` or `servoshell` fails;
+description: Troubleshoot Servo build and runtime issues, and consult OHOS / HarmonyOS dev/test recipes for `servoshell` — launching via `aa start` with `--ps` / `--psn` flag forms, pushing test files / HTML fixtures / fonts / hosts files / TLS certs / `prefs.json` into the app sandbox, where on the device Servo reads its `prefs.json`, and keeping the device screen awake during testing. Trigger when `./mach build` or `servoshell` fails, OR when preparing to run / test Servo on an OHOS device — especially when about to push files to the device for Servo (the running app cannot read `/data/local/tmp/`; files have to land in the app sandbox under `/data/storage/...`, typically via `hdc file send -b org.servo.servo …`), set Servo prefs on device, launch `servoshell` with custom command-line flags, or make the device screen stay on for a test session.
 ---
 
 # servo
