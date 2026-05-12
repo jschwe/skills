@@ -1,6 +1,6 @@
 ---
 name: servo
-description: Troubleshoot Servo build and runtime issues, and consult OHOS / HarmonyOS dev/test recipes for `servoshell` — launching via `aa start` with `--ps` / `--psn` flag forms, pushing test files / HTML fixtures / fonts / hosts files / TLS certs / `prefs.json` into the app sandbox, where on the device Servo reads its `prefs.json`, and keeping the device screen awake during testing. Trigger when `./mach build` or `servoshell` fails, OR when preparing to run / test Servo on an OHOS device — especially when about to push files to the device for Servo (the running app cannot read `/data/local/tmp/`; files have to land in the app sandbox under `/data/storage/...`, typically via `hdc file send -b org.servo.servo …`), set Servo prefs on device, launch `servoshell` with custom command-line flags, or make the device screen stay on for a test session.
+description: Troubleshoot Servo build and runtime issues, and consult OHOS / HarmonyOS dev/test recipes for `servoshell` — launching via `aa start` with `--ps` / `--psn` flag forms, pushing test files / HTML fixtures / fonts / hosts files / TLS certs / `prefs.json` into the app sandbox, where on the device Servo reads its `prefs.json`, and keeping the device screen awake during testing. Trigger when `./mach build` or `servoshell` fails, OR **before running Servo on OHOS / HarmonyOS**, or when preparing to test Servo on an OHOS device, screenshotting Servo on device, driving Servo via uitest, pushing files into the Servo app sandbox (the running app cannot read `/data/local/tmp/`; files have to land under `/data/storage/...`, typically via `hdc file send -b org.servo.servo …`), setting Servo prefs on device, or launching `servoshell` with custom command-line flags.
 crates: servo,servo-*
 ---
 
@@ -29,6 +29,21 @@ Add new issues or recipes by dropping a `resources/<slug>.md` file, then linking
 - **`mach build` fails inside a clang resource header (e.g. `avx10_2bf16intrin.h: error: use of undeclared identifier '__builtin_ia32_*'`)** — bindgen loaded one clang version's `libclang` but a different version's `clang` binary, so `libclang` is parsing intrinsic headers that reference builtins it doesn't know ([rust-bindgen#2682](https://github.com/rust-lang/rust-bindgen/issues/2682)). Fix is to set both `LIBCLANG_PATH` and `CLANG_PATH` to the same toolchain. Details: @servo/resources/bindgen-libclang-clang-mismatch.md
 
 ### Mobile (OHOS / Android)
+
+> **Before running Servo on OHOS — grab the SCREEN wakelock.** The very first command of any OHOS Servo session should be:
+> ```sh
+> hdc shell 'hidumper -s PowerManagerService -a "-t"'    # grab; silent on success
+> ```
+> Release it when the session ends:
+> ```sh
+> hdc shell 'hidumper -s PowerManagerService -a "-f"'    # release; silent on success
+> ```
+> When the screen turns off, OHOS moves the foreground app to background and the system then **freezes** it (cgroup-based suspension): rendering stops, JS timers don't fire, scheduled tasks don't run, hdc-driven scripts see no progress. Consequences if you skip the wakelock:
+> - **Performance measurements are invalid.** FPS, paint times, JS benchmarks captured across a screen-off window include an arbitrary frozen interval; the numbers are meaningless, not just "throttled".
+> - **Driver scripts hang or time out.** A `--auto-quit-after-load-event=…` deadline can't fire while the app is frozen; uitest steps wait for UI that's not being updated.
+> - **Screenshots / `uitest screenCap` return the lock screen**, getting misdiagnosed as a Servo crash.
+>
+> The screen-off timeout is user-configurable down to ~10s, so do not assume any safe default. Full rationale, idempotency notes, and the `power-shell timeout` alternative: @servo/resources/ohos-keep-screen-awake.md.
 
 - **`org.servo.servo` bundle launches then immediately terminates with `TypeError: Cannot read property initServo of undefined`** *(OHOS only)* — `libservoshell.so` failed to load because the build SDK references NDK symbols (e.g. `OH_AVPlayer_SetDataSource`) at a higher API level than the device runtime supports; the napi loader logs this as a warning under `MUSL-LDSO` / `org.servo.servo/NAPI` in hilog, then binds `servoshell` to `undefined`, which surfaces as the misleading JS TypeError. Fix is to align the build SDK and `ohos-*-sys` feature pins with the device's `const.ohos.apiversion`. Details: @servo/resources/ohos-api-level-mismatch.md
 - **`println!()` / `eprintln!()` produce no output on device** — `stdout` / `stderr` are not attached to a console on OHOS/Android. servoshell installs a redirect that forwards both fds through `log::debug!` (→ hilog/logcat), but it's gated on `cfg(not(servo_production))`, so production builds silently drop the output entirely. Non-production builds also pass through servoshell's in-process log filter (default allowlist includes `servoshell::egl::log=debug`), which a custom `--log-filter` / `log_filter` pref can inadvertently silence. Fix is to use `log!`/`tracing` macros instead of `println!`. Details: @servo/resources/mobile-stdout-not-visible.md

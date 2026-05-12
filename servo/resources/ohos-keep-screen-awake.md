@@ -1,12 +1,30 @@
 # Keeping the OHOS screen awake during testing
 
-How to detect and avoid screen-off / lock-screen interference when iterating on Servo on a real OHOS device — taking screenshots, navigating, capturing logs, running measurements, or driving the device with `uitest`. The screen-off timeout is **user-configurable in Settings** (typical values range from ~10 seconds to a few minutes; there is no fixed system default to rely on), and on devices the user has set to short timeouts the screen routinely goes black mid-loop. The result: screenshots return the lock screen instead of Servo, and you misread it as a Servo crash or as the page never loading. Don't assume any particular timeout — query the device, then override.
+How to detect and avoid screen-off / lock-screen interference when iterating on Servo on a real OHOS device — taking screenshots, navigating, capturing logs, running performance measurements, or driving the device with `uitest`. The screen-off timeout is **user-configurable in Settings** (typical values range from ~10 seconds to a few minutes; there is no fixed system default to rely on), and on devices the user has set to short timeouts the screen routinely goes black mid-loop. Don't assume any particular timeout — query the device, then override.
+
+## Why this matters: more than just screenshots
+
+When the screen turns off, OHOS moves the foreground app to the **background** state, and the system then applies app-freeze (cgroup-based suspension) to background apps. While frozen, Servo:
+
+- **Does not render frames.** Compositor and pipeline tasks are paused.
+- **Does not run JS timers or `requestAnimationFrame` callbacks.** They queue or get coalesced; some are dropped entirely depending on the policy.
+- **Does not service network I/O or page-load events.** A page that was "almost loaded" stays that way until the device is woken.
+- **Does not respond to hdc-driven input.** `uitest uiInput` either fails to find the (un-rendered) target or finds it but the click has no effect because the app isn't scheduling.
+
+Consequences cascade through every common task:
+
+- **Performance measurements are invalid.** FPS counters, frame-time histograms, paint times, JS benchmark scores, and `tracing` spans that straddle the screen-off transition include an arbitrary "lights out" gap. The numbers are not "throttled" — they are *paused for some fraction of the interval you measured*, and there is no marker telling you which fraction.
+- **Automation scripts hang or quietly stall.** A `--auto-quit-after-load-event=10s` timeout cannot fire while the app is frozen; `uitest` steps wait indefinitely for UI that's not being updated; host-side polling loops keep timing out on "the page should have loaded by now".
+- **Screenshots return the lock screen.** `snapshot_display` / `uitest screenCap` capture whatever the display is currently showing — and "currently showing" is the lock-screen UI, regardless of what Servo would render if it were running.
+
+Hilog tends to mislead the diagnosis: the *last* lines before the screen turned off look like normal Servo activity, log-only reasoning concludes "everything is fine", and the next visible event is the user pressing the power button minutes later. The freeze itself is silent.
 
 ## Symptom
 
-- Screenshots taken via `snapshot_display -f /data/local/tmp/screen.png` (or `uitest screenCap`) return a clock-only / "swipe to unlock" image, even when Servo is alive and rendering, because the device dimmed and locked between launch and capture.
-- Hilog continues to show normal Servo activity, so log-only reasoning would say "everything is fine," yet the visual confirmation step keeps failing.
-- Some Servo behaviors (animation throttling, `requestAnimationFrame` cadence, periodic JS timers) also change while the screen is off — measurements taken during a "lights out" window are not comparable to ones taken with the screen on.
+- Performance numbers (FPS, paint times, JS bench scores) vary wildly run-to-run with no code change between runs, and the spread correlates with how long a run takes (longer runs → more screen-off time → worse numbers).
+- An automation script appears to "hang" after a successful launch; `hdc shell` is still responsive, but the target app is not making progress.
+- Screenshots taken via `snapshot_display -f /data/local/tmp/screen.png` (or `uitest screenCap`) return a clock-only / "swipe to unlock" image, even when Servo had been alive and rendering, because the device dimmed and locked between launch and capture.
+- Hilog continues to show normal Servo activity up to a point and then goes silent, with the silence misread as "Servo crashed without a panic line".
 
 ## Confirm — was the screen actually off / locked?
 
