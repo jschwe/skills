@@ -1,6 +1,7 @@
 ---
 name: ohos-performance-testing
 description: Profile OpenHarmony / OHOS / HarmonyOS apps with hiperf (CPU sampling, callchains, flamegraphs). Trigger when the user mentions hiperf, OpenHarmony performance, profiling an OHOS or HOS device, or analysing a hiperf.data capture.
+crates: *
 ---
 
 ## HiPerf

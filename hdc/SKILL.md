@@ -1,6 +1,7 @@
 ---
 name: hdc
 description: OpenHarmony Device Connector (hdc) — port-forwarding (fport / rport), shell, file transfer, install. Trigger when the user mentions hdc, OpenHarmony device connector, hdc port forwarding, fport/rport, or troubleshooting hdc commands.
+crates: *
 ---
 
 # hdc

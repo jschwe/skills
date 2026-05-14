@@ -1,6 +1,7 @@
 ---
 name: ohos-rust
 description: Set up cross-compilation of Rust binaries for OpenHarmony / OHOS / HarmonyOS using the standalone command-line SDK. Trigger when the user wants to build a Rust crate for an OHOS device, mentions targets like aarch64-unknown-linux-ohos / armv7-unknown-linux-ohos / x86_64-unknown-linux-ohos, hits linker errors building for OHOS, or asks how to push a Rust binary to a HarmonyOS device.
+crates: *
 ---
 
 # ohos-rust
