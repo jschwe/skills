@@ -2,7 +2,7 @@
 set -euo pipefail
 
 repo_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-skills_dir="${CLAUDE_SKILLS_DIR:-$HOME/.claude/skills}"
+skills_dir="${SKILLS_DIR:-$HOME/.claude/skills}"
 
 install_skill() {
     local name="$1"
