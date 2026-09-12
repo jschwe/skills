@@ -83,7 +83,7 @@ Frequent root causes:
 
 | Var | Effect |
 |---|---|
-| `OHOS_HDC_SERVER_PORT` | Server listen *port* (default 8710). **Port only — no host.** To target a remote server, use `-s host:port`, not this var. |
+| `OHOS_HDC_SERVER_PORT` | Server listen *port* (default 8710). **Port only — no host.** A remote server is reached through a forward to this machine's loopback on that port (see `remote-hdc.md`), or with `-s <ip>:<port>` (numeric IP only). |
 | `OHOS_HDC_LOG_LEVEL` | 0–6 (`OFF`, `FATAL`, `WARN`, `INFO`, `DEBUG`, `ALL`, `LIBUSB`). `5` is the usual debug setting. |
 | `OHOS_HDC_HEARTBEAT` | `1` disables heartbeat packets between server and daemon. |
 | `OHOS_HDC_CMD_RECORD` | `1` enables command-history logging in `$TMPDIR/hdc_cmd/` (API 20+). |

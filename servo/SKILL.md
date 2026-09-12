@@ -45,6 +45,11 @@ Add new issues or recipes by dropping a `resources/<slug>.md` file, then linking
 >
 > The screen-off timeout is user-configurable down to ~10s, so do not assume any safe default. Full rationale, idempotency notes, and the `power-shell timeout` alternative: @servo/resources/ohos-keep-screen-awake.md.
 
+> **Device attached to another machine?** The recipes here work unchanged over a
+> forwarded hdc server, except for `hdc fport`/`rport` (WebDriver, devtools, local
+> test servers), which end on the other machine. See the "Device attached to another
+> machine" section of the `hdc` skill before starting.
+
 - **`org.servo.servo` bundle launches then immediately terminates with `TypeError: Cannot read property initServo of undefined`** *(OHOS only)* — `libservoshell.so` failed to load because the build SDK references NDK symbols (e.g. `OH_AVPlayer_SetDataSource`) at a higher API level than the device runtime supports; the napi loader logs this as a warning under `MUSL-LDSO` / `org.servo.servo/NAPI` in hilog, then binds `servoshell` to `undefined`, which surfaces as the misleading JS TypeError. Fix is to align the build SDK and `ohos-*-sys` feature pins with the device's `const.ohos.apiversion`. Details: @servo/resources/ohos-api-level-mismatch.md
 - **`println!()` / `eprintln!()` produce no output on device** — `stdout` / `stderr` are not attached to a console on OHOS/Android. servoshell installs a redirect that forwards both fds through `log::debug!` (→ hilog/logcat), but it's gated on `cfg(not(servo_production))`, so production builds silently drop the output entirely. Non-production builds also pass through servoshell's in-process log filter (default allowlist includes `servoshell::egl::log=debug`), which a custom `--log-filter` / `log_filter` pref can inadvertently silence. Fix is to use `log!`/`tracing` macros instead of `println!`. Details: @servo/resources/mobile-stdout-not-visible.md
 
