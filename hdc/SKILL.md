@@ -71,4 +71,18 @@ For multi-device targeting (`-t`), `file send`/`recv` argument order, `bm`-passt
 
 For running hdc from a containerized agent against a device attached to another host (SSH-tunneled or direct TCP), see @hdc/resources/remote-hdc.md.
 
+## Device attached to another machine
+
+Signs: the user said so, `OHOS_HDC_SERVER_PORT` names a forwarded port, or
+`OHOS_TEST_RUNNER_HDC_SERVER` is set. Read @hdc/resources/remote-hdc.md, then:
+
+- Plain `hdc …` works unchanged once the forward ends on the loopback the tools run in (with
+  `OHOS_HDC_SERVER_PORT=<port>`); no `-s`, no alias. Start with `hdc checkserver`.
+- **Never `hdc kill` / `hdc start`** — that stops the user's server on the other machine.
+- `file send`/`recv` and `install` use this machine's files; shell, logs, uitest just work.
+- `fport`/`rport` end on the *device host*: WebDriver, devtools and local test servers need an
+  extra SSH forward there, which only the user can add.
+- `[Empty]` or silence usually means the tunnel or relay is down, or a stray local server holds
+  the port — not a missing device.
+
 Full OHOS reference: <https://gitcode.com/openharmony/docs/blob/master/en/application-dev/dfx/hdc.md>.
